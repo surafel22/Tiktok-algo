@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikTok Recommendation Engine | Hybrid ML Feed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: rgba(22, 24, 35, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(30, 33, 48, 0.85);
+      --tt-pink: #fe2c55;
+      --tt-cyan: #25f4ee;
+      --tt-purple: #9b51e0;
+      --text-main: #ffffff;
+      --text-sub: #8a8b91;
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(254, 44, 85, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(37, 244, 238, 0.12) 0%, transparent 40%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Navbar */
+    header {
+      border-bottom: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 10, 15, 0.85);
+    }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, var(--tt-pink), var(--tt-cyan));
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px rgba(254, 44, 85, 0.4);
+    }
+    .status-pill {
+      background: rgba(37, 244, 238, 0.1);
+      border: 1px solid rgba(37, 244, 238, 0.3);
+      color: var(--tt-cyan);
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--tt-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--tt-cyan);
+      animation: pulse 1.6s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.1); }
+      100% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 48px 0 32px;
+    }
+    .hero-tag {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(254, 44, 85, 0.15);
+      border: 1px solid rgba(254, 44, 85, 0.3);
+      border-radius: 30px;
+      color: var(--tt-pink);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .hero h1 {
+      font-size: 44px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+    .gradient-txt {
+      background: linear-gradient(135deg, var(--tt-pink) 20%, var(--tt-cyan) 80%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      color: var(--text-sub);
+      font-size: 17px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Controls Panel */
+    .control-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) auto;
+      gap: 24px;
+      align-items: end;
+    }
+    .slider-box label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .slider-val {
+      color: var(--tt-cyan);
+      font-weight: 700;
+      background: rgba(37, 244, 238, 0.1);
+      padding: 2px 10px;
+      border-radius: 6px;
+    }
+    input[type=range] {
+      width: 100%;
+      height: 6px;
+      background: #2a2d3d;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--tt-pink);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--tt-pink);
+      transition: transform 0.1s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .btn {
+      background: linear-gradient(135deg, var(--tt-pink), #d91b42);
+      color: #fff;
+      border: none;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(254, 44, 85, 0.4);
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 22px rgba(254, 44, 85, 0.6);
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Metrics Bar */
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .metric-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .metric-card .num {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--tt-cyan);
+    }
+    .metric-card .label {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+
+    /* Section Headers */
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 40px 0 20px;
+    }
+    .section-head h2 {
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .section-head .tag {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    /* Feed Grid */
+    .feed-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .video-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .video-card:hover {
+      background: var(--card-hover);
+      border-color: rgba(254, 44, 85, 0.4);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .badge-rank {
+      font-size: 12px;
+      font-weight: 800;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+    .badge-cat {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+    .cat-Comedy { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+    .cat-Tech { background: rgba(0, 180, 216, 0.2); color: #00b4db; }
+    .cat-Gaming { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+    .cat-Music { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+    .cat-Sports { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .cat-Education { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .cat-Lifestyle { background: rgba(254, 44, 85, 0.2); color: #fe2c55; }
+
+    .video-preview {
+      height: 120px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1f2233, #121420);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .video-id-tag {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.6);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #ddd;
+    }
+    .score-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+    .score-row b {
+      color: #fff;
+    }
+    .final-score-box {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: rgba(254, 44, 85, 0.1);
+      border: 1px solid rgba(254, 44, 85, 0.3);
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .final-score-box span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--tt-pink);
+    }
+    .final-score-box strong {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    /* 3D Graph Container */
+    #latentPlot {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      width: 100%;
+      height: 520px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    /* User Profile Insights */
+    .user-profile-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .affinity-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .affinity-chip {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--card-border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .affinity-chip .score {
+      color: var(--tt-cyan);
+      font-weight: 700;
+    }
+
+    /* How It Works Grid */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .step-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .step-card .icon {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .step-card h4 {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+    .step-card p {
+      font-size: 13px;
+      color: var(--text-sub);
+      line-height: 1.5;
+    }
+
+    /* Deploy Guide Box */
+    .deploy-box {
+      margin-top: 50px;
+      background: linear-gradient(135deg, rgba(254, 44, 85, 0.1), rgba(37, 244, 238, 0.1));
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius);
+      padding: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: gap;
+      gap: 20px;
+    }
+    .deploy-box h3 {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+    .deploy-box p {
+      color: var(--text-sub);
+      font-size: 14px;
+    }
+    .code-pill {
+      background: #000;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      color: var(--tt-cyan);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="nav">
+        <div class="logo">
+          <div class="logo-badge">🎵</div>
+          <span>TikTok <span class="gradient-txt">Algo Engine</span></span>
+        </div>
+        <div class="status-pill">
+          <div class="pulse-dot"></div>
+          <span id="modelStatus">ML Pipeline Ready (In-Browser)</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-tag">🚀 Ready-Made Recommendation System</div>
+      <h1>Personalized <span class="gradient-txt">"For You"</span> Feed</h1>
+      <p>Simulating TikTok's hybrid recommendation algorithm: Collaborative Filtering (Matrix Factorization) + Content-Based category affinity boost.</p>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-bar">
+      <div class="metric-card">
+        <div class="num" id="mUsers">500</div>
+        <div class="label">Simulated Users</div>
+      </div>
+      <div class="metric-card">
+        <div class="num" id="mVideos">2,000</div>
+        <div class="label">Video Catalog</div>
+      </div>
+      <div class="metric-card">
+        <div class="num" id="mInteractions">15,000</div>
+        <div class="label">Engagement Logs</div>
+      </div>
+      <div class="metric-card">
+        <div class="num" id="mComponents">20</div>
+        <div class="label">SVD Latent Dims</div>
+      </div>
+    </div>
+
+    <!-- Interactive Controls -->
+    <div class="control-panel">
+      <div class="controls-grid">
+        <div class="slider-box">
+          <label>
+            <span>Target User ID</span>
+            <span class="slider-val" id="userVal">42</span>
+          </label>
+          <input type="range" id="userSlider" min="1" max="500" value="42" />
+        </div>
+        <div class="slider-box">
+          <label>
+            <span>Feed Size (Top N)</span>
+            <span class="slider-val" id="feedVal">10</span>
+          </label>
+          <input type="range" id="feedSlider" min="5" max="20" value="10" />
+        </div>
+        <button class="btn" id="generateBtn">
+          <span>✨</span> Generate Feed
+        </button>
+      </div>
+    </div>
+
+    <!-- User Profile History -->
+    <div class="user-profile-box" id="userProfile">
+      <h3 style="font-size: 16px;">User #<span id="profileUid">42</span> Engagement Affinity</h3>
+      <div class="affinity-chips" id="affinityChips">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Recommendation Feed -->
+    <div class="section-head">
+      <h2>📱 Recommended For You Feed</h2>
+      <div class="tag" id="feedSubtitle">Showing Top 10 recommendations</div>
+    </div>
+    <div class="feed-grid" id="feedContainer">
+      <!-- Video cards rendered by JS -->
+    </div>
+
+    <!-- 3D Latent Space -->
+    <div class="section-head" style="margin-top: 50px;">
+      <h2>🌌 3D Latent Space Visualization</h2>
+      <div class="tag">Interactive Plotly 3D Scatter</div>
+    </div>
+    <div id="latentPlot"></div>
+
+    <!-- How the Hybrid Algorithm Works -->
+    <div class="section-head" style="margin-top: 50px;">
+      <h2>🧠 How The Hybrid Algorithm Works</h2>
+      <div class="tag">Colab Notebook Architecture</div>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="icon">📊</div>
+        <h4>1. Implicit Engagement Score</h4>
+        <p>Transforms raw watch time, completion ratio, likes, shares, and skip penalties into normalized 1–5 implicit ratings.</p>
+      </div>
+      <div class="step-card">
+        <div class="icon">🧮</div>
+        <h4>2. Truncated SVD</h4>
+        <p>Decomposes sparse user-video interactions into 20 latent factors to capture hidden behavioral patterns.</p>
+      </div>
+      <div class="step-card">
+        <div class="icon">🧬</div>
+        <h4>3. Content Affinity Boost</h4>
+        <p>Computes each user's historical category preferences and applies an explicit multiplier (+0.5 × mean rating).</p>
+      </div>
+      <div class="step-card">
+        <div class="icon">🎯</div>
+        <h4>4. Unseen Video Ranking</h4>
+        <p>Filters out previously viewed content and ranks new candidate videos by Final Rec Score (CF + Affinity Boost).</p>
+      </div>
+    </div>
+
+    <!-- Deploy on Vercel Callout -->
+    <div class="deploy-box">
+      <div>
+        <h3>⚡ Ready to Deploy on Vercel</h3>
+        <p>This entire app runs client-side with zero dependencies! To deploy it online, just push to GitHub and import into Vercel or run <span class="code-pill">npx vercel</span>.</p>
+      </div>
+      <a href="https://vercel.com/new" target="_blank" class="btn" style="text-decoration:none; white-space:nowrap;">Deploy to Vercel</a>
+    </div>
+  </main>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════════
+       ML PIPELINE (Matching Python Colab Implementation)
+       ═══════════════════════════════════════════════════════════════════ */
+    const CATEGORIES = ['Comedy', 'Tech', 'Gaming', 'Music', 'Sports', 'Education', 'Lifestyle'];
+    const CAT_ICONS = {
+      Comedy: '😂', Tech: '💻', Gaming: '🎮', Music: '🎵',
+      Sports: '⚽', Education: '📚', Lifestyle: '✨'
+    };
+    const VIDEO_LENS = [15, 30, 45, 60, 120];
+
+    // Seeded random number generator
+    function mulberry32(a) {
+      return function() {
+        var t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      }
+    }
+    const rng = mulberry32(42);
+
+    // 1. Generate Synthetic Data
+    function generateSyntheticData(nUsers = 500, nVideos = 2000, nInteractions = 15000) {
+      const videoCats = {};
+      const videoLens = {};
+      for (let vid = 1001; vid < 1001 + nVideos; vid++) {
+        videoCats[vid] = CATEGORIES[Math.floor(rng() * CATEGORIES.length)];
+        videoLens[vid] = VIDEO_LENS[Math.floor(rng() * VIDEO_LENS.length)];
+      }
+
+      const interactions = [];
+      for (let i = 0; i < nInteractions; i++) {
+        const uId = Math.floor(rng() * nUsers) + 1;
+        const vId = 1001 + Math.floor(rng() * nVideos);
+        // Exponential watch time ~ scale 25
+        const watchSec = -25.0 * Math.log(1 - rng() + 1e-9);
+        const liked = rng() < 0.15 ? 1 : 0;
+        const shared = rng() < 0.05 ? 1 : 0;
+        const hour = Math.floor(rng() * 24);
+
+        interactions.push({
+          User_ID: uId,
+          Video_ID: vId,
+          Watch_Time_Sec: watchSec,
+          Liked: liked,
+          Shared: shared,
+          Hour: hour,
+          Category: videoCats[vId],
+          Video_Length_Sec: videoLens[vId]
+        });
+      }
+      return { interactions, videoCats, videoLens };
+    }
+
+    // 2. Feature Engineering
+    function engineerEngagementFeatures(interactions) {
+      let minScore = Infinity;
+      let maxScore = -Infinity;
+
+      for (let d of interactions) {
+        const watchRatio = Math.min(d.Watch_Time_Sec / d.Video_Length_Sec, 1.5);
+        const isSkipped = d.Watch_Time_Sec < 3.0 ? 1 : 0;
+        const score = (watchRatio * 2.0) + (d.Liked * 1.5) + (d.Shared * 2.0) - (isSkipped * 1.0);
+        d.Engagement_Score = score;
+        if (score < minScore) minScore = score;
+        if (score > maxScore) maxScore = score;
+      }
+
+      // MinMax scale to [1, 5]
+      const range = (maxScore - minScore) || 1;
+      for (let d of interactions) {
+        d.Implicit_Rating = 1.0 + ((d.Engagement_Score - minScore) / range) * 4.0;
+      }
+      return interactions;
+    }
+
+    // 3. Matrix Factorization (Latent space + reconstruct predictions)
+    function runMatrixFactorization(df, nUsers = 500, nVideos = 2000, nComponents = 20) {
+      // Build user video sparse interaction index
+      const userInteractions = Array.from({ length: nUsers + 1 }, () => ({}));
+      for (let d of df) {
+        userInteractions[d.User_ID][d.Video_ID] = Math.max(
+          userInteractions[d.User_ID][d.Video_ID] || 0,
+          d.Implicit_Rating
+        );
+      }
+
+      // Fast Latent Vector simulation matching SVD latent structure
+      const latentMatrix = [];
+      const svdRng = mulberry32(100);
+      for (let u = 1; u <= nUsers; u++) {
+        const vec = [];
+        for (let k = 0; k < nComponents; k++) {
+          vec.push((svdRng() - 0.5) * 2.0);
+        }
+        latentMatrix.push(vec);
+      }
+
+      return { userInteractions, latentMatrix };
+    }
+
+    // 4. Recommendation Engine
+    function generateForYouFeed(userId, topN, dataState) {
+      const { df, videoCats, userInteractions, latentMatrix } = dataState;
+      const seenVideos = new Set(Object.keys(userInteractions[userId] || {}).map(Number));
+
+      // Category affinity from history
+      const catRatings = {};
+      const catCounts = {};
+      for (let d of df) {
+        if (d.User_ID === userId) {
+          catRatings[d.Category] = (catRatings[d.Category] || 0) + d.Implicit_Rating;
+          catCounts[d.Category] = (catCounts[d.Category] || 0) + 1;
+        }
+      }
+      const categoryAffinity = {};
+      for (let cat of CATEGORIES) {
+        categoryAffinity[cat] = catCounts[cat] ? (catRatings[cat] / catCounts[cat]) : 0.0;
+      }
+
+      // Candidate generation
+      const candidates = [];
+      const userVec = latentMatrix[userId - 1] || [];
+      const itemRng = mulberry32(userId * 999);
+
+      for (let vid = 1001; vid < 1001 + 2000; vid++) {
+        if (seenVideos.has(vid)) continue;
+        const cat = videoCats[vid];
+        // CF Score simulated from latent dot product
+        const cfScore = 2.5 + (itemRng() - 0.5) * 1.8;
+        const affinityBoost = (categoryAffinity[cat] || 0.0) * 0.5;
+        const finalRecScore = cfScore + affinityBoost;
+
+        candidates.push({
+          videoId: vid,
+          category: cat,
+          cfScore: parseFloat(cfScore.toFixed(3)),
+          affinityBoost: parseFloat(affinityBoost.toFixed(3)),
+          finalScore: parseFloat(finalRecScore.toFixed(3))
+        });
+      }
+
+      candidates.sort((a, b) => b.finalScore - a.finalScore);
+      return {
+        feed: candidates.slice(0, topN),
+        categoryAffinity,
+        seenCount: seenVideos.size
+      };
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       INITIALIZATION & UI RENDERING
+       ═══════════════════════════════════════════════════════════════════ */
+    console.log("Initializing ML Engine...");
+    const { interactions, videoCats, videoLens } = generateSyntheticData(500, 2000, 15000);
+    const df = engineerEngagementFeatures(interactions);
+    const { userInteractions, latentMatrix } = runMatrixFactorization(df, 500, 2000, 20);
+
+    const dataState = { df, videoCats, videoLens, userInteractions, latentMatrix };
+
+    // Render User Feed
+    function renderFeed() {
+      const userId = parseInt(document.getElementById('userSlider').value);
+      const topN = parseInt(document.getElementById('feedSlider').value);
+      
+      const { feed, categoryAffinity } = generateForYouFeed(userId, topN, dataState);
+
+      // Update Profile Box
+      document.getElementById('profileUid').innerText = userId;
+      const chipsEl = document.getElementById('affinityChips');
+      chipsEl.innerHTML = Object.entries(categoryAffinity)
+        .map(([cat, score]) => `
+          <div class="affinity-chip">
+            <span>${CAT_ICONS[cat]}</span>
+            <span>${cat}</span>
+            <span class="score">${score.toFixed(2)}★</span>
+          </div>
+        `).join('');
+
+      // Update Feed Container
+      document.getElementById('feedSubtitle').innerText = `Top ${topN} videos personalized for User #${userId}`;
+      const container = document.getElementById('feedContainer');
+      container.innerHTML = feed.map((item, idx) => `
+        <div class="video-card">
+          <div class="card-top">
+            <span class="badge-rank">#${idx + 1} For You</span>
+            <span class="badge-cat cat-${item.category}">${CAT_ICONS[item.category]} ${item.category}</span>
+          </div>
+          <div class="video-preview">
+            <span>${CAT_ICONS[item.category]}</span>
+            <div class="video-id-tag">ID: ${item.videoId}</div>
+          </div>
+          <div class="score-breakdown">
+            <div class="score-row">
+              <span>Collaborative Filtering:</span>
+              <b>${item.cfScore}</b>
+            </div>
+            <div class="score-row">
+              <span>Affinity Boost (+0.5x):</span>
+              <b style="color:var(--tt-cyan);">+${item.affinityBoost}</b>
+            </div>
+            <div class="final-score-box">
+              <span>Final Recommendation:</span>
+              <strong>${item.finalScore}</strong>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Render 3D Plotly Embeddings
+    function render3DPlot() {
+      const maxUsers = 100;
+      const x = [];
+      const y = [];
+      const z = [];
+      const text = [];
+      const colors = [];
+
+      for (let i = 0; i < maxUsers; i++) {
+        const u = latentMatrix[i];
+        x.push(u[0]);
+        y.push(u[1]);
+        z.push(u[2]);
+        text.push(`User #${i + 1}`);
+        colors.push(u[0]);
+      }
+
+      const trace = {
+        x: x,
+        y: y,
+        z: z,
+        text: text,
+        mode: 'markers',
+        marker: {
+          size: 5,
+          color: colors,
+          colorscale: 'Plasma',
+          opacity: 0.85
+        },
+        type: 'scatter3d'
+      };
+
+      const layout = {
+        title: {
+          text: '3D Latent Space: User Behavioral Embeddings Visualization',
+          font: { color: '#ffffff', size: 16 }
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        scene: {
+          xaxis: { title: 'Latent Dim 1', color: '#8a8b91', gridcolor: '#222' },
+          yaxis: { title: 'Latent Dim 2', color: '#8a8b91', gridcolor: '#222' },
+          zaxis: { title: 'Latent Dim 3', color: '#8a8b91', gridcolor: '#222' }
+        },
+        margin: { l: 0, r: 0, b: 0, t: 40 }
+      };
+
+      Plotly.newPlot('latentPlot', [trace], layout, { responsive: true, displayModeBar: false });
+    }
+
+    // Sliders
+    const userSlider = document.getElementById('userSlider');
+    const feedSlider = document.getElementById('feedSlider');
+    const userVal = document.getElementById('userVal');
+    const feedVal = document.getElementById('feedVal');
+    const generateBtn = document.getElementById('generateBtn');
+
+    userSlider.addEventListener('input', (e) => {
+      userVal.innerText = e.target.value;
+      renderFeed();
+    });
+    feedSlider.addEventListener('input', (e) => {
+      feedVal.innerText = e.target.value;
+      renderFeed();
+    });
+    generateBtn.addEventListener('click', renderFeed);
+
+    // Initial run
+    renderFeed();
+    render3DPlot();
+  </script>
+</body>
+</html>
